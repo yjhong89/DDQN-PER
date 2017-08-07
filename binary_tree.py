@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-
+import math
 
 class Leaf():
 	def __init__(self, experience_id, td_error):
@@ -15,19 +15,26 @@ class Leaf():
 
 # Unsorted binary sum tree
 class BinaryTree():
-	def __init__(self):
+	def __init__(self, size):
 		self.root = None
+		self.size = size
+		self.counter = 0
+		# Including root
+		self.num_element = 1
+		self.track = list()
+		self.update_flag = False
 	
 	# For recursive insert
 	def insert(self, experience_id, td_error, node=None):
+
 		if node is None:
 			node = self.root
 
 		if self.root is None:
 			self.root = Leaf(experience_id, td_error)
+	
 		# In case root is not None
 		else:
-
 			if node.left is None:
 				# Move node`s vlaue to node`s left childe
 				node.left = Leaf(node.experience, node.value)
@@ -38,6 +45,8 @@ class BinaryTree():
 				print('Node parent : %s' % node.parent)
 				self.node_update(node=node)
 				print('\n')
+				# Count number of element
+				self.num_element += 1
 				return
 			# New layer need to be added 
 			else:
@@ -69,6 +78,65 @@ class BinaryTree():
 		else:
 			return False, exp
 
+	# When binary tree has saturated, change Leaf node to new node from oldest sample
+	def full_size(self, experience_id, td_error):
+		if self.counter > self.size:
+			self.counter = 0
+		
+		# Get digit of binary tree size
+		digits = int(math.floor(math.log(self.size)))
+		# Returns string, convert it in reverse way
+		binary_path = list(bin(self.counter)[::-1][:-2])
+		# Fill binary path list until it has 'digits' element
+		for _ in xrange(len(binary_path), digits+1, 1):
+			binary_path.append(0)
+		# 0 : Left, 1: Right
+		binary_path.reverse()
+		print(binary_path)
+		def search(node=None):
+			print('Searching leaf from root')
+			if node is None:
+				node = self.root
+	
+			for path_index, path in enumerate(binary_path):
+				if int(path):
+					print('Going right\n')
+					node = node.right
+				else:
+					print('Going left\n')
+					node = node.left
+	
+				# Replace node`s experience and priority
+				if node.left is None:
+					print('Arrive target leaf\n')
+					node.experience = experience_id
+					node.value = td_error
+					# Update node`s value
+					self.node_update(node=node.parent)
+					return
+		self.counter += 1
+		return search
+
+	def update_transition(self, updated_priority, track_path):
+		node = self.root
+		self.update_flag = True
+		for track in track_path:
+			if track:
+				print('Going right\n')
+				node = node.right
+			else:
+				print('Going left\n')
+				node = node.left
+
+			if node.left is None:
+				print('Arrived target leaf\n')
+				node.value = updated_priority
+				# Update node`s value
+				self.node_update(node=node.parent)
+		self.update_flag = False
+		return
+		
+		
 	
 	def node_update(self, node=None):
 		node.left.parent = node
@@ -76,37 +144,50 @@ class BinaryTree():
 		node.value = node.left.value + node.right.value
 		print('Node left value : %3.3f, Node right value : %3.3f, Node parent value : %3.3f' %(node.left.value, node.right.value, node.value))
 		if node.parent is None:
-			print('Root')
+			print('Here is Root')
 			return
 		elif node.parent.left == node:
-			print('Parent`s left child')
-			node.parent.num_leftchild += 2
+			if (self.num_element == self.size) or self.update_flag:
+				print('Number of element constant')
+			else:
+				print('Parent`s left child')
+				node.parent.num_leftchild += 2
 		elif node.parent.right == node:
-			print('Parent`s right child')
-			node.parent.num_rightchild += 2
+			if (self.num_element == self.size) or self.update_flag:
+				print('Number of element constant')
+			else:
+				print('Parent`s right child')
+				node.parent.num_rightchild += 2
 		else:
 			raise Exception('No parents!')
 		print('Left child %d, right child %d' %(node.parent.num_leftchild, node.parent.num_rightchild))
+		print('Updated')
 		# Parent`s value update
 		self.node_update(node=node.parent)
 
 
 	def retrieve(self, s, node=None):
+		# Store new path
+		if len(self.track) != 0:
+			self.track = list()			
+ 
 		if node is None:
 			node = self.root
 		
 		# If node is leaf node, return experience and priority
 		if node.left is None:
-			return node.exeperience_id, node.value
+			return node.experience, node.value
 		
 		if node.left.value >= s:
+			self.track.append(0)	
 			return self.retrieve(s, node=node.left)
 		else:
+			self.track.append(1)
 			return self.retrieve(s - node.left.value, node=node.right)
 			
 		
 if __name__ == "__main__":
-	bt = BinaryTree()		
+	bt = BinaryTree(8)		
 	bt.insert(100,11)
 	bt.insert(100,9)
 	bt.insert(100,30)
@@ -115,3 +196,9 @@ if __name__ == "__main__":
 	bt.insert(100,3)
 	bt.insert(100,5)
 	bt.insert(100,6)
+	print(bt.num_element)
+	_,v = bt.retrieve(45)
+	print(bt.track, v)
+	bt.update_transition(31)
+#	a=bt.full_size(100,10)
+#	a(node=None)
