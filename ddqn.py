@@ -4,6 +4,7 @@ import per
 import time, os, cv2
 import model
 import utils
+from emulator import *
 
 
 class Atari:
@@ -15,8 +16,10 @@ class Atari:
 		self.engine = emulator(rom_name='breakout.bin', vis=self.args.visualize)
 		self.args.num_actions = len(self.engine.legal_actions)
 		# Build model
+		self.build_model()	
 
-	def buils_model(self):
+
+	def build_model(self):
 		print('Create online network and target network')
 		self.q_net = model.Q_network(self.args, name='Q_net')
 		self.target_net = model.Q_network(self.args, name='Target_net')
@@ -25,7 +28,9 @@ class Atari:
  	 	# Before that, need to initialize
  	 	# Make dictionary
  	 	self.saver_dict = dict()
- 	 	for i in self.qnet.tr_vrbs:
+		print('Variable list to save')	
+ 	 	for i in self.q_net.tr_vrbs:
+			print(i.name)
  	 	 	if i.name.startswith('Q_net/Conv1/weight'):
  	 	 	 	self.saver_dict['qw1'] = i
  	 	 	elif i.name.startswith('Q_net/Conv2/weight'):
@@ -42,7 +47,8 @@ class Atari:
  	 	 	 	self.saver_dict['qb3'] = i
  	 	 	elif i.name.startswith('Q_net/FC2/bias'):
  	 	 	 	self.saver_dict['qb4'] = i
- 		for i in self.Target_net.tr_vrbs:
+ 		for i in self.target_net.tr_vrbs:
+			print(i.name)
 			if i.name.startswith('Target_net/Conv1/weight'):
  	 	 	 	self.saver_dict['tw1'] = i
  	 	 	elif i.name.startswith('Target_net/Conv2/weight'):
@@ -59,7 +65,7 @@ class Atari:
  	 	 	 	self.saver_dict['tb3'] = i
  	 	 	elif i.name.startswith('Target_net/FC2/bias'):
  	 	 	 	self.saver_dict['tb4'] = i
- 	 	self.saver_dict['step'] = self.qnet.global_step
+ 	 	self.saver_dict['step'] = self.q_net.global_step
 		for k, v in self.saver_dict.items():
 			print(v.op.name)
  	 	self.saver = tf.train.Saver(self.saver_dict)
@@ -74,8 +80,8 @@ class Atari:
  	 	 	print('Not load checkpoint')
 
 
-
  	def train(self):
+		self.sess.run(tf.global_variables_initializer())
   		self.step = 0
   		# Reset game
   		print('Reset before train start')
@@ -94,6 +100,8 @@ class Atari:
 
 		# Epsilon
 		self.eps = self.args.initial_eps
+		# Beta
+		self.beta = self.args.initial_beta
 
 		while self.step < self.args.num_iterations:
 			if self.per.get_size == self.args.train_start:
@@ -115,7 +123,7 @@ class Atari:
 					sample_ter = np.expand_dims(batch_ter[i], axis=0)
 					sample_next_s = np.expand_dins(batch_next_s[i], axis=0)
 					# Get target action by DDQN, by feeding next state, make [1,84,84,4]
-					feed = {self.q_net.states : sample_s}
+					feed = {self.q_net.states : sample_next_s}
 					# [1, num actions]
 					online_q_values = self.sess.run([self.q_net.q_value], feed_dict = feed)
 					# Get action index(argmax) which maximum q value, [1,]
@@ -132,7 +140,7 @@ class Atari:
 					sample_pr = sample_priority[i] / priority_sum
 					# Calculate sample importance sampling weight
 					# Beta between [0,1], Tells how much compensate biased gradient
-					sample_is_weight = (self.args.replay_size*sample_pr) ** (-self.args.beta)
+					sample_is_weight = (self.args.replay_size*sample_pr) ** (-self.beta)
 					# Need to normalize by max(w)
 					max_w = (self.args.replay_size * (self.per.max_priority / priority_sum))
 					sample_is_weight = sample_is_weight / max_w
@@ -141,8 +149,8 @@ class Atari:
 					# Apply IS weight to gradient and accumulate
 					_ = self.sess.run([acc_op], feed_dict = feed)	
 
-					# Update priority
-					td_error = abs(td_error_ // max(, abs(td_error_)))
+					# Update clipped priority
+					td_error = abs(td_error_ / max(1, abs(td_error_)))
 					self.per.bt.update_transition(td_error, sample_track[i])	
 				# Update weight
 				_ = self.sess.run([self.train_op])
@@ -156,6 +164,9 @@ class Atari:
 				# Write log
 				if np.mod(self.step, self.log_interval) == 0:
 					utils.write_log(self.step, self.total_reward, self.total_Q, self.eps, mode='train')
+				
+				# From initial beta to 1
+				self.beta = min(1, self.args.initial_beta + float(self.step)/float(self.args.beta_step))
 
 				# Decaying epsilon
 				self.eps = max(self.args.eps_min, self.args.initial_eps - float(self.step)/float(self.args.eps_step))
@@ -191,8 +202,32 @@ class Atari:
 			# Next state
 			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
 
+			
+			# Get one sample in minibatch, make batch index
+			new_sample_s = np.expand_dims(self.cur_state_proc, axis=0)
+			new_sample_act = np.expand_dims(self.action_index, axis=0)
+			new_sample_rwd = np.expand_dims(self.reward_scaled, axis=0)
+			new_sample_ter = np.expand_dims(self.terminal, axis=0)
+			new_sample_next_s = np.expand_dins(self.state_proc, axis=0)
+			# Get target action by DDQN, by feeding next state, make [1,84,84,4]
+			feed = {self.q_net.states : new_sample_next_s}
+			# [1, num actions]
+			new_online_q_values = self.sess.run([self.q_net.q_value], feed_dict = feed)
+			# Get action index(argmax) which maximum q value, [1,]
+			new_online_q_argmax = np.argmax(new_online_q_values, axis = 1) 
+			# [1, num actions]
+			new_target_value = self.sess.run([self.target_net.q_value], feed_dict = {self.traget_net.states : new_sample_next_s})
+			# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
+			# Make it [1,]
+			target_max_value = tf.expand_dims(new_target_value[0][new_online_q_argmax],axis=0)
+			feed = {self.q_net.states : sample_s, self.q_net.actions : new_sample_act, self.q_net.rewards : new_sample_rwd, self.q_net.terminals : new_sample_ter, self.q_net.q_max : new_target_max_value}
+			# Get TD Error, gradient
+			new_td_error_ = self.sess.run([self.q_net.td_error], feed_dict=feed)
+			# Clipping to 1
+			self.priority = abs(new_td_error_ / max(1, abs(new_td_error_)))
+
 			if self.state_gray_old is not None:
-				per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.priority) 		
+				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.priority) 		
 							
 
 
@@ -245,7 +280,7 @@ class Atari:
 		if np.random.rand() > self.eps:
 			print('Greedy action')
 			# batch size for 'x' is 1 since we choose action for specific state
-			q_prediction = self.sess.run(self.qnet.y, feed_dict={self.qnet.x : np.reshape(state, [1,84,84,4])})[0]
+			q_prediction = self.sess.run(self.q_net.q_value, feed_dict={self.qnet.states : np.reshape(state, [1,84,84,4])})[0]
    			# Consider case when there are several same q max value
 			# argwhere(if statement), return 2 dim array
 			max_action_indices = np.argwhere(q_prediction == np.max(q_prediction))
@@ -260,7 +295,7 @@ class Atari:
 		else:
 			action_idx = np.random.randint(0,len(self.engine.legal_actions))
 			print('Episilon greedy action : %d ' %self.engine.legal_actions[action_idx])
-			q_prediction = self.sess.run(self.qnet.y, feed_dict={self.qnet.x : np.reshape(state, [1,84,84,4])})[0]
+			q_prediction = self.sess.run(self.q_net.q_value, feed_dict={self.q_net.states : np.reshape(state, [1,84,84,4])})[0]
 			return action_idx, self.engine.legal_actions[action_idx], q_prediction[action_idx]
 	
 

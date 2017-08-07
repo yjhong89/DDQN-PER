@@ -26,11 +26,10 @@ class PER:
 		self.full_flag = False
 		
 		# Create binary tree
-		self.bt = binary_tree.BinaryTree()
+		self.bt = binary_tree.BinaryTree(self.size)
 		# To normalize importance weight
 		self.max_priority = 0
 
-	
 
 	def get_batches(self):
 		print('Priority sum is %3.4f' % bt.root.value)
@@ -67,7 +66,7 @@ class PER:
 		experience_list.append(ter)
 		experience_list.append(next_state)
 
-		if self.flag:
+		if self.full_flag:
 			# Replace old samples
 			replace = bt.full_size(experience_id=experience_list, td_error=weighted_priority) 
 			replace(node=None)
@@ -80,12 +79,12 @@ class PER:
 		
 		# Check full flag
 		if self.counter == self.size:
-			self.flag = True
+			self.full_flag = True
 			self.counter = 0	
 
 	@property
 	def get_size(self):
-		if self.flag:
+		if self.full_flag:
 			return self.size
 		else:
 			return self.counter

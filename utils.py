@@ -51,9 +51,8 @@ def conv2d(inp, output_dim, filter_height, filter_width, stride,stddev=0.02, nam
 		return conv_wb, conv_wb.get_shape().as_list()
  
 def linear(inp, output_size, name=None, stddev=0.02):
-	inp_shape = inp.get_shape().as_list()
 	with tf.variable_scope(name or 'linear'):
-		weight = tf.get_variable('weight', [inp_shape[-1], output_size], initializer=tf.truncated_normal_initializer(stddev=stddev))
+		weight = tf.get_variable('weight', [inp.get_shape()[-1], output_size], initializer=tf.truncated_normal_initializer(stddev=stddev))
 		bias = tf.get_variable('bias', [output_size], initializer=tf.constant_initializer(0))
 		weighted_sum = tf.matmul(inp, weight) + bias
     	return weighted_sum
