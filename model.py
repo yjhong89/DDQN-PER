@@ -5,9 +5,9 @@ import utils
 
 class Q_network():
 	def __init__(self, args, name='Q_network'):
-		print('Initializing networks')
 		self.args = args
 		self.name = name
+		print('Initializing %s networks' % self.name)
 		
 		with tf.variable_scope(self.name):
 			# Placeholders
@@ -18,27 +18,25 @@ class Q_network():
 			# Reward placeholder
 			self.rewards = tf.placeholder(tf.float32, [None], name='Rewards')
 			# Q max placeholder
-			self.q_max = tf.placeholder(tf.float32, [None])
+			self.q_max = tf.placeholder(tf.float32, [None], name='Q_max')
 			# Terminal placeholder
 			self.terminals = tf.placeholder(tf.float32, [None], name='Terminals')  
 
-			conv1, conv1_shape = utils.conv2d(self.states, output_dim=16, filter_height=8, filter_width=8, stride=4, name='Conv1')
-			print('1st convolution layer shape : %s' % conv1_shape) 
-			conv1_nl = tf.nn.relu(conv1)
+			self.conv1 = utils.conv2d(self.states, output_dim=16, filter_height=8, filter_width=8, stride=4, name='Conv1')
+			self.conv1_nl = tf.nn.relu(self.conv1)
 
-			conv2, conv2_shape = utils.conv2d(conv1_nl, output_dim=32, filter_height=4, filter_width=4, stride=2, name='Conv2')
-			print('2nd convolution layer shape : %s' % conv2_shape)
-			conv2_nl = tf.nn.relu(conv2)
+			self.conv2 = utils.conv2d(self.conv1_nl, output_dim=32, filter_height=4, filter_width=4, stride=2, name='Conv2')
+			self.conv2_nl = tf.nn.relu(self.conv2)
 
-			conv_shape = conv2_nl.get_shape().as_list()
+			conv_shape = self.conv2_nl.get_shape().as_list()
 		
 			# FC layer
-			fc_flat = tf.reshape(conv2_nl, [-1, conv_shape[-1]*conv_shape[-2]*conv_shape[-3]])
-			fc = utils.linear(fc_flat, self.args.final_fc, name='FC1')
-			fc_nl = tf.nn.relu(fc)
+			self.fc_flat = tf.reshape(self.conv2_nl, [-1, conv_shape[-1]*conv_shape[-2]*conv_shape[-3]])
+			self.fc = utils.linear(self.fc_flat, self.args.final_fc, name='FC1')
+			self.fc_nl = tf.nn.relu(self.fc)
 
 			# [batch size, num_actions]
-			self.q_value = utils.linear(fc_nl, self.args.num_actions, name='FC2')
+			self.q_value = utils.linear(self.fc_nl, self.args.num_actions, name='FC2')
 	
 			# q_target, q_pred : [batch,]
 			# If terminal state, next state q : 0

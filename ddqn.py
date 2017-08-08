@@ -17,6 +17,7 @@ class Atari:
 		self.args.num_actions = len(self.engine.legal_actions)
 		# Build model
 		self.build_model()	
+		self.sess.run(tf.global_variables_initializer())
 
 
 	def build_model(self):
@@ -81,7 +82,6 @@ class Atari:
 
 
  	def train(self):
-		self.sess.run(tf.global_variables_initializer())
   		self.step = 0
   		# Reset game
   		print('Reset before train start')
@@ -121,18 +121,18 @@ class Atari:
 					sample_act = np.expand_dims(batch_act[i], axis=0)
 					sample_rwd = np.expand_dims(batch_rwd[i], axis=0)
 					sample_ter = np.expand_dims(batch_ter[i], axis=0)
-					sample_next_s = np.expand_dins(batch_next_s[i], axis=0)
+					sample_next_s = np.expand_dims(batch_next_s[i], axis=0)
 					# Get target action by DDQN, by feeding next state, make [1,84,84,4]
 					feed = {self.q_net.states : sample_next_s}
 					# [1, num actions]
-					online_q_values = self.sess.run([self.q_net.q_value], feed_dict = feed)
+					online_q_values = self.sess.run(self.q_net.q_value, feed_dict = feed)
 					# Get action index(argmax) which maximum q value, [1,]
 					online_q_argmax = np.argmax(online_q_values, axis = 1) 
 					# [1, num actions]
-					target_value = self.sess.run([self.target_net.q_value], feed_dict = {self.traget_net.states : sample_next_s})
+					target_value = self.sess.run(self.target_net.q_value, feed_dict = {self.target_net.states : sample_next_s})
 					# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
 					# Make it [1,]
-					target_max_value = tf.expand_dims(target_value[0][online_q_argmax],axis=0)
+					target_max_value = target_value[0][online_q_argmax]
 					feed = {self.q_net.states : sample_s, self.q_net.actions : sample_act, self.q_net.rewards : sample_rwd, self.q_net.terminals : sample_ter, self.q_net.q_max : target_max_value}
 					# Get TD Error, gradient
 					td_error_, grad_ = self.sess.run([self.q_net.td_error, self.q_net.grads], feed_dict=feed)
@@ -145,24 +145,29 @@ class Atari:
 					max_w = (self.args.replay_size * (self.per.max_priority / priority_sum))
 					sample_is_weight = sample_is_weight / max_w
 
-					acc_op = [self.q_net.accum_vars[i].assign_add(sample_is_weight*gv[0]) for i, gv in enumerate(grad_)]
+					acc_op = [self.q_net.accum_vars[index].assign_add(sample_is_weight*gv[0]) for index, gv in enumerate(grad_)]
 					# Apply IS weight to gradient and accumulate
 					_ = self.sess.run([acc_op], feed_dict = feed)	
 
-					# Update clipped priority
+					# Update clipped prioriy
 					td_error = abs(td_error_ / max(1, abs(td_error_)))
+					if td_error < self.args.epsilon:
+						td_error += self.args.epsilon
 					self.per.bt.update_transition(td_error, sample_track[i])	
+					print('%d/%d\n' % (i+1, self.args.batch_size))
+
 				# Update weight
-				_ = self.sess.run([self.train_op])
+				_ = self.sess.run([self.q_net.train_op])
+				print('Updated weight')
 				
 				# Copy network
-				if np.mod(self.step, self.copy_interval) == 0:
+				if np.mod(self.step, self.args.copy_interval) == 0:
 					self.copy_network()
 				# Save
-				if np.mod(self.step, self.save_interval) == 0:
+				if np.mod(self.step, self.args.save_interval) == 0:
 					self.save(self.step)
 				# Write log
-				if np.mod(self.step, self.log_interval) == 0:
+				if np.mod(self.step, self.args.log_interval) == 0:
 					utils.write_log(self.step, self.total_reward, self.total_Q, self.eps, mode='train')
 				
 				# From initial beta to 1
@@ -201,33 +206,35 @@ class Atari:
 			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
 			# Next state
 			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
-
 			
 			# Get one sample in minibatch, make batch index
 			new_sample_s = np.expand_dims(self.cur_state_proc, axis=0)
 			new_sample_act = np.expand_dims(self.action_index, axis=0)
+			new_sample_act = self.get_onehot(new_sample_act)
 			new_sample_rwd = np.expand_dims(self.reward_scaled, axis=0)
 			new_sample_ter = np.expand_dims(self.terminal, axis=0)
-			new_sample_next_s = np.expand_dins(self.state_proc, axis=0)
+			new_sample_next_s = np.expand_dims(self.state_proc, axis=0)
 			# Get target action by DDQN, by feeding next state, make [1,84,84,4]
 			feed = {self.q_net.states : new_sample_next_s}
 			# [1, num actions]
-			new_online_q_values = self.sess.run([self.q_net.q_value], feed_dict = feed)
+			new_online_q_values = self.sess.run(self.q_net.q_value, feed_dict = feed)
 			# Get action index(argmax) which maximum q value, [1,]
 			new_online_q_argmax = np.argmax(new_online_q_values, axis = 1) 
 			# [1, num actions]
-			new_target_value = self.sess.run([self.target_net.q_value], feed_dict = {self.traget_net.states : new_sample_next_s})
+			new_target_value = self.sess.run(self.target_net.q_value, feed_dict = {self.target_net.states : new_sample_next_s})
 			# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
 			# Make it [1,]
-			target_max_value = tf.expand_dims(new_target_value[0][new_online_q_argmax],axis=0)
-			feed = {self.q_net.states : sample_s, self.q_net.actions : new_sample_act, self.q_net.rewards : new_sample_rwd, self.q_net.terminals : new_sample_ter, self.q_net.q_max : new_target_max_value}
+			target_max_value = new_target_value[0][new_online_q_argmax]
+			feed = {self.q_net.states : new_sample_s, self.q_net.actions : new_sample_act, self.q_net.rewards : new_sample_rwd, self.q_net.terminals : new_sample_ter, self.q_net.q_max : target_max_value}
 			# Get TD Error, gradient
-			new_td_error_ = self.sess.run([self.q_net.td_error], feed_dict=feed)
+			new_td_error_ = self.sess.run(self.q_net.td_error, feed_dict=feed)
 			# Clipping to 1
 			self.priority = abs(new_td_error_ / max(1, abs(new_td_error_)))
+			if self.priority < self.args.epsilon:
+				self.priority += self.args.epsilon
 
 			if self.state_gray_old is not None:
-				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.priority) 		
+				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.state_proc, self.priority) 		
 							
 
 
@@ -301,8 +308,9 @@ class Atari:
 
 	# action : [batch_size,] and element is integer, environment gives it as an integer
 	def get_onehot(self, action):
-		one_hot = np.zeros([self.args.batch_size, self.args.num_actions])
-		for i in xrange(self.args.batch_size):
+		num_batch = action.shape[0]
+		one_hot = np.zeros([num_batch, self.args.num_actions])
+		for i in xrange(num_batch):
 			one_hot[i, int(action[i])] = 1
 		return one_hot
 

@@ -32,27 +32,31 @@ class PER:
 
 
 	def get_batches(self):
-		print('Priority sum is %3.4f' % bt.root.value)
-		divide_index = bt.root.value / self.args.batch_size
+		print('Priority sum is %3.4f' % self.bt.root.value)
+		divide_index = self.bt.root.value / self.args.batch_size
 		self.batch_history = list()
 		self.batch_priority = list()
+		random_index = list()
 		# To sample mini batch of size k, the range[0, sum] is divided eequally into k ranges
 		for i in xrange(self.args.batch_size):
-			random_number = np.random.random(1) * divide_index * (i+1)
+			random_number = (i * divide_index) + (np.random.random(1) * divide_index)
+			print('%d-th random number %3.3f between %3.3f : %3.3f' %(i+1, random_number, divide_index*i, divide_index*(i+1)))
 			# 'transition' will be list of experience
-			transition, priority = bt.retrieve(random_number)
+			transition, priority = self.bt.retrieve(random_number)			
 			# Store each batch track path to update transition priority
-			self.batch_history.append(bt.track)
+			self.batch_history.append(self.bt.track)
 			self.batch_priority.append(priority)
 			self.batch_states[i] = transition[0]
 			self.batch_actions[i] = transition[1]
 			self.batch_rewards[i] = transition[2]
 			self.batch_terminals[i] = transition[3]
-			self.batch_next_states[i] = transsition[4]
-		return self.batch_states, self.batch_actions, self.batch_rewards, self.batch_terminals, self.batch_next_states, bt.root.value, self.batch_history, self.batch_priority
+			self.batch_next_states[i] = transition[4]
+			self.bt.renew_track()
+		return self.batch_states, self.batch_actions, self.batch_rewards, self.batch_terminals, self.batch_next_states, self.bt.root.value, self.batch_history, self.batch_priority
 
 
 	def insert(self, state, act, rwd, ter, next_state, priority):
+		print('Insert priority : %3.4f' % priority)
 		# Update maximum value
 		if priority > self.max_priority:
 			self.max_priority = priority
@@ -68,11 +72,11 @@ class PER:
 
 		if self.full_flag:
 			# Replace old samples
-			replace = bt.full_size(experience_id=experience_list, td_error=weighted_priority) 
+			replace = self.bt.full_size(experience_id=experience_list, td_error=weighted_priority) 
 			replace(node=None)
 		else:
 			# Insert to binary tree
-			bt.insert(experience_id=experience_list, td_error=self.priority, node=None)
+			self.bt.insert(experience_id=experience_list, td_error=weighted_priority, node=None)
 
 		# Update counter
 		self.counter += 1

@@ -120,7 +120,8 @@ class BinaryTree():
 	def update_transition(self, updated_priority, track_path):
 		node = self.root
 		self.update_flag = True
-		for track in track_path:
+		print(track_path)
+		for _, track in enumerate(track_path):
 			if track:
 				print('Going right\n')
 				node = node.right
@@ -161,16 +162,13 @@ class BinaryTree():
 		else:
 			raise Exception('No parents!')
 		print('Left child %d, right child %d' %(node.parent.num_leftchild, node.parent.num_rightchild))
-		print('Updated')
 		# Parent`s value update
 		self.node_update(node=node.parent)
 
+	def renew_track(self):
+		self.track = list()
 
 	def retrieve(self, s, node=None):
-		# Store new path
-		if len(self.track) != 0:
-			self.track = list()			
- 
 		if node is None:
 			node = self.root
 		

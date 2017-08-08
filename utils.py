@@ -43,19 +43,23 @@ def write_log(steps, total_rwd, total_q, total_loss, num_episode, epsilon, start
 def conv2d(inp, output_dim, filter_height, filter_width, stride,stddev=0.02, name=None):
 	with tf.variable_scope(name or 'conv2d'):
 		weight = tf.get_variable('weight', [filter_height, filter_width, inp.get_shape()[-1], output_dim], initializer=tf.truncated_normal_initializer(stddev=stddev))
+		weight.initializer.run()
 		# padding=SAME : ceil(float(in_height))/float(stride)
 		# padding=VALID: cell(float(in_height-filter_height)+1)/float(stride)
 		conv = tf.nn.conv2d(inp, weight, strides=[1,stride,stride,1], padding='VALID')
 		bias = tf.get_variable('bias', [output_dim], initializer=tf.constant_initializer(0))
+		bias.initializer.run()
 		conv_wb = tf.add(conv,bias)
-		return conv_wb, conv_wb.get_shape().as_list()
+	return conv_wb
  
 def linear(inp, output_size, name=None, stddev=0.02):
 	with tf.variable_scope(name or 'linear'):
 		weight = tf.get_variable('weight', [inp.get_shape()[-1], output_size], initializer=tf.truncated_normal_initializer(stddev=stddev))
+		weight.initializer.run()
 		bias = tf.get_variable('bias', [output_size], initializer=tf.constant_initializer(0))
+		bias.initializer.run()
 		weighted_sum = tf.matmul(inp, weight) + bias
-    	return weighted_sum
+   	return weighted_sum
 
 
 
