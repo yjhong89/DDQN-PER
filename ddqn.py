@@ -236,6 +236,46 @@ class Atari:
 			if self.state_gray_old is not None:
 				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.state_proc, self.priority) 		
 							
+	def evaluation(self):
+		self.eval_step = 0
+		if self.load():
+			print('Loaded checkpoint')
+		else:
+			raise Exception('No checkpoint')
+
+		self.reset_game()
+		self.reset_statistics()
+		utils.initialize_log()
+
+		while self.eval_step < self.args.num_iterations:
+			self.eval_step += 1
+			if self.eval_step % self.log_interval == 0:
+				utils.write_log(self.eval_step, self.total_reward, self.total_Q, self.args.eps_min, mode='eval')
+
+			# When game is finished(One episode is over)
+			if self.terminal:
+				print('Reset since episode ends')
+				self.reset_game()
+				self.num_epi += 1
+				self.total_reward += self.epi_reward
+				self.epi_reward = 0
+
+			# Get epsilon greedy action from state
+			self.action_index, self.action, self.maxQ = self.select_action(self.state_proc)
+			# Get reward and next state from environment
+			self.state, self.reward, self.terminal = self.engine.next(self.action)
+			# Scale rewards, all positive rewards to be 1, all negative rewards to be -1
+			self.reward_scaled = self.reward // max(1,abs(self.reward))
+			self.epi_reward += self.reward_scaled
+			self.total_Q += self.maxQ
+	
+			# Change to next 4 consecutive images
+			self.state_gray_old = np.copy(self.state_gray)
+			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
+			# Preprocess
+			self.state_resized = cv2.resize(self.state, (84,110))
+			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
+			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
 
 
 	def copy_network(self):
