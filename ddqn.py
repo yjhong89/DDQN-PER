@@ -86,7 +86,7 @@ class Atari:
   		# Reset game
   		print('Reset before train start')
 		self.reset_game()
-  		self.reset_statistics()
+  		self.initialize_statistics()
 
   		# Increment global step as RMSoptimizer run
 		utils.initialize_log()
@@ -244,7 +244,7 @@ class Atari:
 			raise Exception('No checkpoint')
 
 		self.reset_game()
-		self.reset_statistics()
+		self.initialize_statistics()
 		utils.initialize_log()
 
 		while self.eval_step < self.args.num_iterations:
@@ -259,6 +259,7 @@ class Atari:
 				self.num_epi += 1
 				self.total_reward += self.epi_reward
 				self.epi_reward = 0
+				self.total_Q = 0
 
 			# Get epsilon greedy action from state
 			self.action_index, self.action, self.maxQ = self.select_action(self.state_proc)
@@ -294,12 +295,11 @@ class Atari:
 		print('Copy targetnet from qnet!')
  
 	
-	def reset_statistics(self):
+	def initialize_statistics(self):
    		self.epi_reward = 0
 		self.num_epi = 0
 		self.total_reward = 0
 		self.total_Q = 0
-		self.total_loss = 0
 
  	
 	def reset_game(self):
