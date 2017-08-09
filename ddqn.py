@@ -327,7 +327,7 @@ class Atari:
 		if np.random.rand() > self.eps:
 			print('Greedy action')
 			# batch size for 'x' is 1 since we choose action for specific state
-			q_prediction = self.sess.run(self.q_net.q_value, feed_dict={self.qnet.states : np.reshape(state, [1,84,84,4])})[0]
+			q_prediction = self.sess.run(self.q_net.q_value, feed_dict={self.q_net.states : np.reshape(state, [1,84,84,4])})[0]
    			# Consider case when there are several same q max value
 			# argwhere(if statement), return 2 dim array
 			max_action_indices = np.argwhere(q_prediction == np.max(q_prediction))
