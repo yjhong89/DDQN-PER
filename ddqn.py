@@ -83,6 +83,7 @@ class Atari:
 
  	def train(self):
   		self.step = 0
+		self.num_epi = 0
   		# Reset game
   		print('Reset before train start')
 		self.reset_game()
@@ -157,7 +158,7 @@ class Atari:
 					print('%d/%d\n' % (i+1, self.args.batch_size))
 
 				# Update weight
-				_ = self.sess.run([self.q_net.train_op])
+				_ = self.sess.run(self.q_net.train_op)
 				print('Updated weight')
 				
 				# Copy network
@@ -166,9 +167,6 @@ class Atari:
 				# Save
 				if np.mod(self.step, self.args.save_interval) == 0:
 					self.save(self.step)
-				# Write log
-				if np.mod(self.step, self.args.log_interval) == 0:
-					utils.write_log(self.step, self.total_reward, self.total_Q, self.eps, mode='train')
 				
 				# From initial beta to 1
 				self.beta = min(1, self.args.initial_beta + float(self.step)/float(self.args.beta_step))
@@ -181,8 +179,9 @@ class Atari:
 				print('Reset for episode ends')
 				self.reset_game()
 				self.num_epi += 1
-				self.total_reward += self.epi_reward
-				self.epi_reward = 0
+				if self.per.get_size > self.args.train_start:
+					utils.write_log(self.step, self.epi_reward, self.total_Q, self.num_epi, self.eps, self.start_time, mode='train') 
+					self.initialize_statistics()
 
 			# Get epsilon greedy action from state
 			self.action_index, self.action, self.maxQ = self.select_action(self.state_proc)
@@ -238,6 +237,7 @@ class Atari:
 							
 	def evaluation(self):
 		self.eval_step = 0
+		self.num_epi = 0
 		if self.load():
 			print('Loaded checkpoint')
 		else:
@@ -249,17 +249,14 @@ class Atari:
 
 		while self.eval_step < self.args.num_iterations:
 			self.eval_step += 1
-			if self.eval_step % self.log_interval == 0:
-				utils.write_log(self.eval_step, self.total_reward, self.total_Q, self.args.eps_min, mode='eval')
 
 			# When game is finished(One episode is over)
 			if self.terminal:
 				print('Reset since episode ends')
 				self.reset_game()
 				self.num_epi += 1
-				self.total_reward += self.epi_reward
-				self.epi_reward = 0
-				self.total_Q = 0
+				utils.write_log(self.eval_step, self.total_reward, self.total_Q, self.args.eps_min, mode='eval')
+				self.initialize_log()
 
 			# Get epsilon greedy action from state
 			self.action_index, self.action, self.maxQ = self.select_action(self.state_proc)
@@ -297,7 +294,6 @@ class Atari:
 	
 	def initialize_statistics(self):
    		self.epi_reward = 0
-		self.num_epi = 0
 		self.total_reward = 0
 		self.total_Q = 0
 
