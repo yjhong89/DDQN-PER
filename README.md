@@ -6,3 +6,5 @@ Reference
 > ##### Paper
 >> 1. Double Q learning : https://arxiv.org/abs/1509.06461.pdf
 >> 2. Priortized Experience Replay : https://arxiv.org/pdf/1511.05952.pdf
+> ##### Requirement
+>> 1. ALE environment : https://github.com/mgbellemare/Arcade-Learning-Environment
