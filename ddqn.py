@@ -148,7 +148,7 @@ class Atari:
 
 					acc_op = [self.q_net.accum_vars[index].assign_add(sample_is_weight*gv[0]) for index, gv in enumerate(grad_)]
 					# Apply IS weight to gradient and accumulate
-					_ = self.sess.run([acc_op], feed_dict = feed)	
+					_ = self.sess.run(acc_op, feed_dict = feed)	
 
 					# Update clipped prioriy
 					td_error = abs(td_error_ / max(1, abs(td_error_)))
@@ -160,6 +160,9 @@ class Atari:
 				# Update weight
 				_ = self.sess.run(self.q_net.train_op)
 				print('Updated weight')
+				#clear_variable = [self.q_net.accum_vars[idx].assign(0) for idx, _ in enumerate(self.q_net.tr_vrbs)]
+				_ = self.sess.run(self.q_net.accum_vars)
+				print('Clear gradients')
 				
 				# Copy network
 				if np.mod(self.step, self.args.copy_interval) == 0:
@@ -179,6 +182,7 @@ class Atari:
 				print('Reset for episode ends')
 				self.reset_game()
 				self.num_epi += 1
+				
 				if self.per.get_size > self.args.train_start:
 					utils.write_log(self.step, self.epi_reward, self.total_Q, self.num_epi, self.eps, mode='train') 
 					self.initialize_statistics()
@@ -234,6 +238,7 @@ class Atari:
 
 			if self.state_gray_old is not None:
 				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.state_proc, self.priority) 		
+
 							
 	def evaluation(self):
 		self.eval_step = 0

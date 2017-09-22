@@ -40,9 +40,9 @@ class Q_network():
 	
 			# q_target, q_pred : [batch,]
 			# If terminal state, next state q : 0
-			self.q_target = self.rewards + tf.mul(1-self.terminals, tf.mul(self.args.discount_factor,self.q_max))
+			self.q_target = self.rewards + tf.multiply(1-self.terminals, tf.multiply(self.args.discount_factor,self.q_max))
 			# Only get q value for corresponding action
-			self.q_pred = tf.reduce_sum(tf.mul(self.q_value, self.actions), reduction_indices=1)
+			self.q_pred = tf.reduce_sum(tf.multiply(self.q_value, self.actions), reduction_indices=1)
 
 			self.td_error = self.q_target - self.q_pred
 			# Accumulate weight change

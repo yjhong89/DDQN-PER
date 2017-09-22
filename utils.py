@@ -29,7 +29,7 @@ def write_log(steps, total_rwd, total_q, num_episode, epsilon, mode, total_loss 
 
 	if mode == 'train':
 		print('At Training step %d, %d-th episode => total.Q : %3.4f, total.rwd : %3.4f' % \
-		(steps, num_episode, total_q, total_rwd, total_loss))
+		(steps, num_episode, total_q, total_rwd))
 		train_log.write('%d\t,%3.4f\t,%3.4f\t,%3.6f\t\n' % (steps, total_rwd, total_q, epsilon))
 		train_log.flush()
 	elif mode == 'eval':
