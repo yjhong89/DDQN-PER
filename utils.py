@@ -7,35 +7,35 @@ TRAIN = 'train.csv'
 EVAL = 'eval.csv'
 
 def initialize_log():
-	try:
-		train_log = open(os.path.join(LOG_DIR, TRAIN), 'a')
-	except:
+	train_path = os.path.join(LOG_DIR, TRAIN)
+	eval_path = os.path.join(LOG_DIR, EVAL)
+	if os.path.exists(train_path):
+		train_log = open(train_path, 'a')
+	else:
 		print('Initialize log..')
-		train_log = open(os.path.join(LOG_DIR, TRAIN), 'w')
+		train_log = open(train_path, 'w')
 		train_log.write('Step\t'+',episode.rwd\t'+',episode.q\t'+',epsilon\t'+',time\n')
-	try:
-		eval_log = open(os.path.join(LOG_DIR, EVAL), 'a')
-	except:
-		eval_log = open(os.path.join(LOG_DIR, EVAL), 'w')
+	if os.path.exists(eval_path):
+		eval_log = open(eval_path, 'a')
+	else:
+		eval_log = open(eval_path, 'w')
 		eval_log.write('Step\t'+',episode.rwd\t+'+',episode.q\t'+',epsilon\t'+',time\n')
 
 	return train_log, eval_log
 
 
-def write_log(steps, total_rwd, total_q, num_episode, epsilon, start_time, mode, total_loss = 0):
+def write_log(steps, total_rwd, total_q, num_episode, epsilon, mode, total_loss = 0):
 	train_log, eval_log = initialize_log()
 
 	if mode == 'train':
 		print('At Training step %d, %d-th episode => total.Q : %3.4f, total.rwd : %3.4f' % \
 		(steps, num_episode, total_q, total_rwd, total_loss))
-		train_log.write(str(steps)+'\t,' + str(total_rwd)+'\t,' + str(total_q)+'\t,' \
-		+ str(epsilon) + '\t,' + str(time.time() - start_time) + '\n')
+		train_log.write('%d\t,%3.4f\t,%3.4f\t,%3.6f\t\n' % (steps, total_rwd, total_q, epsilon))
 		train_log.flush()
 	elif mode == 'eval':
 		print('At Evaluation step %d, %d-th episode => total.Q : %3.4f, total.rwd : %3.4f' % \
 		(steps, num_episode, total_q, total_rwd))
-		eval_logs.write(str(steps)+'\t,' + str(total_rwd)+'\t,' + str(total_q)+'\t,' \
-		+ str(epsilon) + '\t,' + str(time.time() - start_time) + '\n')
+		eval_log.write('%d\t,%3.4f\t,%3.4f\t,%3.6f\t\n' % (steps, total_rwd, total_q, epsilon))
 		eval_log.flush()
 
 

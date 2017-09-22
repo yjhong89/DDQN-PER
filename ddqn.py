@@ -180,7 +180,7 @@ class Atari:
 				self.reset_game()
 				self.num_epi += 1
 				if self.per.get_size > self.args.train_start:
-					utils.write_log(self.step, self.epi_reward, self.total_Q, self.num_epi, self.eps, self.start_time, mode='train') 
+					utils.write_log(self.step, self.epi_reward, self.total_Q, self.num_epi, self.eps, mode='train') 
 					self.initialize_statistics()
 
 			# Get epsilon greedy action from state
