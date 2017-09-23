@@ -43,22 +43,23 @@ class Q_network():
 			self.q_target = self.rewards + tf.multiply(1-self.terminals, tf.multiply(self.args.discount_factor,self.q_max))
 			# Only get q value for corresponding action
 			self.q_pred = tf.reduce_sum(tf.multiply(self.q_value, self.actions), reduction_indices=1)
-
 			self.td_error = self.q_target - self.q_pred
-			# Accumulate weight change
-			self.loss = tf.reduce_sum(0.5 * tf.pow(self.td_error, 2))
 
+			self.tr_vrbs = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+			for i in xrange(len(self.tr_vrbs)):
+				print(self.tr_vrbs[i])
 
-		self.tr_vrbs = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
-		for i in xrange(len(self.tr_vrbs)):
-			print(self.tr_vrbs[i])
-		
 		if self.name == 'Q_net':
+			# Need to bias annealing with importance sampling weight
+			self.is_weight = tf.placeholder(tf.float32, [None], name='IS_Weight')
+			# w*(td_error)^2
+			self.loss = tf.reduce_sum(0.5 * self.is_weight * tf.pow(self.td_error, 2))
 			self.optimizer = tf.train.RMSPropOptimizer(self.args.learning_rate, 0.99, 0, 1e-6)
 			self.global_step = tf.Variable(0, name='global_step', trainable=False)
 			# Get gradient of each trainable variables as g/v list
-			self.grads = self.optimizer.compute_gradients(self.loss, self.tr_vrbs)
+			grads, vrbs = zip(*self.optimizer.compute_gradients(self.loss))
 			# Convert gradient to tf.Variables to accumulate
-			self.accum_vars = [tf.Variable(tf.zeros_like(v), trainable=False) for v in self.tr_vrbs]
-#			self.accum_ops = [accum_vars[i].assign_add(gv[0]) for i, gv in enumerate(self.grads)]
-			self.train_op = self.optimizer.apply_gradients([(self.accum_vars[i], gv[1]) for i, gv in enumerate(self.grads)], global_step=self.global_step)
+			#self.accum_vars = [tf.Variable(tf.zeros_like(v), trainable=False) for v in self.tr_vrbs]
+			#self.accum_ops = [accum_vars[i].assign_add(gv[0]) for i, gv in enumerate(self.grads)]
+			#self.train_op = self.optimizer.apply_gradients([(self.accum_vars[i], gv[1]) for i, gv in enumerate(self.grads)], global_step=self.global_step)
+			self.train_op = self.optimizer.apply_gradients(zip(grads, vrbs))

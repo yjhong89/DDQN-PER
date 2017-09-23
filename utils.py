@@ -14,12 +14,12 @@ def initialize_log():
 	else:
 		print('Initialize log..')
 		train_log = open(train_path, 'w')
-		train_log.write('Step\t'+',episode.rwd\t'+',episode.q\t'+',epsilon\t'+',time\n')
+		train_log.write('Step\t'+',episode.rwd\t'+',episode.q\t'+',epsilon\t\n')
 	if os.path.exists(eval_path):
 		eval_log = open(eval_path, 'a')
 	else:
 		eval_log = open(eval_path, 'w')
-		eval_log.write('Step\t'+',episode.rwd\t+'+',episode.q\t'+',epsilon\t'+',time\n')
+		eval_log.write('Step\t'+',episode.rwd\t+'+',episode.q\t'+',epsilon\t\n')
 
 	return train_log, eval_log
 

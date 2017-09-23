@@ -135,8 +135,8 @@ class Atari:
 					# Make it [1,]
 					target_max_value = target_value[0][online_q_argmax]
 					feed = {self.q_net.states : sample_s, self.q_net.actions : sample_act, self.q_net.rewards : sample_rwd, self.q_net.terminals : sample_ter, self.q_net.q_max : target_max_value}
-					# Get TD Error, gradient
-					td_error_, grad_ = self.sess.run([self.q_net.td_error, self.q_net.grads], feed_dict=feed)
+					# Get TD Error, as a type of list
+					td_error_ = self.sess.run([self.q_net.td_error], feed_dict=feed)
 					# Calculate sample priority
 					sample_pr = sample_priority[i] / priority_sum
 					# Calculate sample importance sampling weight
@@ -145,25 +145,19 @@ class Atari:
 					# Need to normalize by max(w)
 					max_w = (self.args.replay_size * (self.per.max_priority / priority_sum))
 					sample_is_weight = sample_is_weight / max_w
+					feed[self.q_net.is_weight] = sample_is_weight
 
-					acc_op = [self.q_net.accum_vars[index].assign_add(sample_is_weight*gv[0]) for index, gv in enumerate(grad_)]
-					# Apply IS weight to gradient and accumulate
-					_ = self.sess.run(acc_op, feed_dict = feed)	
+					#acc_op = [self.q_net.accum_vars[index].assign_add(sample_is_weight*gv[0]) for index, gv in enumerate(grad_)]
+					# Apply IS weight to gradient and update
+					_ = self.sess.run(self.q_net.train_op, feed_dict = feed)	
 
 					# Update clipped prioriy
-					td_error = abs(td_error_ / max(1, abs(td_error_)))
+					td_error = abs(td_error_[0] / max(1, abs(td_error_[0])))
 					if td_error < self.args.epsilon:
 						td_error += self.args.epsilon
 					self.per.bt.update_transition(td_error, sample_track[i])	
 					print('%d/%d\n' % (i+1, self.args.batch_size))
 
-				# Update weight
-				_ = self.sess.run(self.q_net.train_op)
-				print('Updated weight')
-				#clear_variable = [self.q_net.accum_vars[idx].assign(0) for idx, _ in enumerate(self.q_net.tr_vrbs)]
-				_ = self.sess.run(self.q_net.accum_vars)
-				print('Clear gradients')
-				
 				# Copy network
 				if np.mod(self.step, self.args.copy_interval) == 0:
 					self.copy_network()
