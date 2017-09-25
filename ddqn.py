@@ -356,9 +356,9 @@ class Atari:
 	def save(self, total_step):
 		model_name = 'DQN'
 		checkpoint_dir = os.path.join(self.args.checkpoint_dir, self.model_dir)
-		if not os.path.exists(chekcpoint_dir):
+		if not os.path.exists(checkpoint_dir):
 			os.mkdir(checkpoint_dir)
-		self.saver.save(self.sess, os.path.join(chekcpoint_dir, model_name, global_step=total_step))
+		self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name, global_step=total_step))
 		print('Model saved at %s in %d steps' % (checkpoint_dir, total_step))
 
  	def load(self):
