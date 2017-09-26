@@ -42,7 +42,6 @@ class BinaryTree():
 				node.right = Leaf(experience_id, td_error)
 				node.num_leftchild += 1
 				node.num_rightchild += 1
-				print('Node parent : %s' % node.parent)
 				self.node_update(node=node)
 				print('\n')
 				# Count number of element

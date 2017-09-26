@@ -118,7 +118,7 @@ class Atari:
 				# Loop in batch
 				for i in xrange(self.args.batch_size):
 					# Get one sample in minibatch
-					sample_s = np.expand_dims(batch_next_s[i], axis=0)
+					sample_s = np.expand_dims(batch_s[i], axis=0)
 					sample_act = np.expand_dims(batch_act[i], axis=0)
 					sample_rwd = np.expand_dims(batch_rwd[i], axis=0)
 					sample_ter = np.expand_dims(batch_ter[i], axis=0)
