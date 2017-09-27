@@ -42,7 +42,7 @@ class Q_network():
 			# If terminal state, next state q : 0
 			self.q_target = self.rewards + tf.multiply(1-self.terminals, tf.multiply(self.args.discount_factor,self.q_max))
 			# Only get q value for corresponding action
-			self.q_pred = tf.reduce_sum(tf.multiply(self.q_value, self.actions), reduction_indices=1)
+			self.q_pred = tf.reduce_sum(self.q_value*self.actions, reduction_indices=1)
 			self.td_error = self.q_target - self.q_pred
 
 			self.tr_vrbs = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)

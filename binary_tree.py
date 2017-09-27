@@ -49,10 +49,10 @@ class BinaryTree():
 				return
 			# New layer need to be added 
 			else:
-				print('Number of left child : %d, right child : %d' %(node.num_leftchild, node.num_rightchild))
+				#print('Number of left child : %d, right child : %d' %(node.num_leftchild, node.num_rightchild))
 				left_full, left_height = self.is_full(node.num_leftchild)
 				right_full, right_height = self.is_full(node.num_rightchild)
-				print('Left {},{} || Right {},{}'.format(left_full, left_height, right_full, right_height))
+				#print('Left {},{} || Right {},{}'.format(left_full, left_height, right_full, right_height))
 				if (left_height != right_height):
 					if (left_full is not True):
 						self.insert(experience_id, td_error, node=node.left)
@@ -93,21 +93,21 @@ class BinaryTree():
 		binary_path.reverse()
 		print(binary_path)
 		def search(node=None):
-			print('Searching leaf from root')
+			#print('Searching leaf from root')
 			if node is None:
 				node = self.root
 	
 			for path_index, path in enumerate(binary_path):
 				if int(path):
-					print('Going right\n')
+					#print('Going right\n')
 					node = node.right
 				else:
-					print('Going left\n')
+					#print('Going left\n')
 					node = node.left
 	
 				# Replace node`s experience and priority
 				if node.left is None:
-					print('Arrive target leaf\n')
+					#print('Arrive target leaf\n')
 					node.experience = experience_id
 					node.value = td_error
 					# Update node`s value
@@ -122,14 +122,14 @@ class BinaryTree():
 		print(track_path)
 		for _, track in enumerate(track_path):
 			if track:
-				print('Going right\n')
+				#print('Going right\n')
 				node = node.right
 			else:
-				print('Going left\n')
+				#print('Going left\n')
 				node = node.left
 
 			if node.left is None:
-				print('Arrived target leaf\n')
+				#print('Arrived target leaf\n')
 				node.value = updated_priority
 				# Update node`s value
 				self.node_update(node=node.parent)
@@ -142,25 +142,23 @@ class BinaryTree():
 		node.left.parent = node
 		node.right.parent = node
 		node.value = node.left.value + node.right.value
-		print('Node left value : %3.3f, Node right value : %3.3f, Node parent value : %3.3f' %(node.left.value, node.right.value, node.value))
+		#print('Node left value : %3.3f, Node right value : %3.3f, Node parent value : %3.3f' %(node.left.value, node.right.value, node.value))
 		if node.parent is None:
-			print('Here is Root')
+			#print('Here is Root')
 			return
 		elif node.parent.left == node:
 			if (self.num_element == self.size) or self.update_flag:
-				print('Number of element constant')
+				pass
 			else:
-				print('Parent`s left child')
 				node.parent.num_leftchild += 2
 		elif node.parent.right == node:
 			if (self.num_element == self.size) or self.update_flag:
-				print('Number of element constant')
+				pass
 			else:
-				print('Parent`s right child')
 				node.parent.num_rightchild += 2
 		else:
 			raise Exception('No parents!')
-		print('Left child %d, right child %d' %(node.parent.num_leftchild, node.parent.num_rightchild))
+		#print('Left child %d, right child %d' %(node.parent.num_leftchild, node.parent.num_rightchild))
 		# Parent`s value update
 		self.node_update(node=node.parent)
 

@@ -76,7 +76,7 @@ class Atari:
  	 	if self.load():
  	 	 	print('Loaded checkpoint..')
  	 	 	# Get global step
- 	 	 	print('Continue from %s steps' % str(self.sess.run(self.qnet.global_step)))
+ 	 	 	print('Continue from %s steps' % str(self.sess.run(self.q_net.global_step)))
  	 	else:
  	 	 	print('Not load checkpoint')
 
@@ -128,15 +128,17 @@ class Atari:
 					# [1, num actions]
 					online_q_values = self.sess.run(self.q_net.q_value, feed_dict = feed)
 					# Get action index(argmax) which maximum q value, [1,]
-					online_q_argmax = np.argmax(online_q_values, axis = 1) 
+					online_q_argmax = np.argmax(online_q_values, axis =1)
+					print('Online q values %s and max argument %d' % (online_q_values, online_q_argmax)) 
 					# [1, num actions]
 					target_value = self.sess.run(self.target_net.q_value, feed_dict = {self.target_net.states : sample_next_s})
 					# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
 					# Make it [1,]
 					target_max_value = target_value[0][online_q_argmax]
+					print('Target q values %s and max value %s' %(target_value, target_max_value))		
 					feed = {self.q_net.states : sample_s, self.q_net.actions : sample_act, self.q_net.rewards : sample_rwd, self.q_net.terminals : sample_ter, self.q_net.q_max : target_max_value}
 					# Get TD Error, as a type of list
-					td_error_ = self.sess.run([self.q_net.td_error], feed_dict=feed)
+					td_error_ = self.sess.run(self.q_net.td_error, feed_dict=feed)
 					# Calculate sample priority
 					sample_pr = sample_priority[i] / priority_sum
 					# Calculate sample importance sampling weight
@@ -149,10 +151,12 @@ class Atari:
 
 					#acc_op = [self.q_net.accum_vars[index].assign_add(sample_is_weight*gv[0]) for index, gv in enumerate(grad_)]
 					# Apply IS weight to gradient and update
-					_ = self.sess.run(self.q_net.train_op, feed_dict = feed)	
-
+					loss_, q_targets_, q_pred_, _ = self.sess.run([self.q_net.loss, self.q_net.q_target, self.q_net.q_pred, self.q_net.train_op], feed_dict = feed)	
+					q_values_ = self.sess.run(self.q_net.q_value, feed_dict=feed)
 					# Update clipped prioriy
-					td_error = abs(td_error_[0] / max(1, abs(td_error_[0])))
+					td_error = abs(td_error_) / max(1, abs(td_error_))
+					print('Loss : %3.4f, Q target : %s, Q_values : %s, Q pred : %s, td_error : %3.4f, is : %3.4f' % (loss_, q_targets_, q_values_, q_pred_, td_error, sample_is_weight))
+					print('%s, %s, %s' %(sample_act, sample_rwd, sample_ter))
 					if td_error < self.args.epsilon:
 						td_error += self.args.epsilon
 					self.per.bt.update_transition(td_error, sample_track[i])	
@@ -216,7 +220,7 @@ class Atari:
 			# [1, num actions]
 			new_online_q_values = self.sess.run(self.q_net.q_value, feed_dict = feed)
 			# Get action index(argmax) which maximum q value, [1,]
-			new_online_q_argmax = np.argmax(new_online_q_values, axis = 1) 
+			new_online_q_argmax = np.argmax(new_online_q_values, axis=1) 
 			# [1, num actions]
 			new_target_value = self.sess.run(self.target_net.q_value, feed_dict = {self.target_net.states : new_sample_next_s})
 			# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
@@ -311,6 +315,7 @@ class Atari:
   		self.state_resized = cv2.resize(self.state, (84,110))
   		# To gray-scale
   		self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
+		print(self.state_gray.shape)
   		# Reset, no previous state
   		self.state_gray_old = None
   		# state_proc[:,:,:3] will remain as zero

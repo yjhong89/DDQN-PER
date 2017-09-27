@@ -10,7 +10,7 @@ def main():
  	parser.add_argument('--num_iterations', type=int, default=1e8)
  	parser.add_argument('--save_interval', type=int, default=50000)
  	parser.add_argument('--copy_interval', type=int, default=10000)
- 	parser.add_argument('--replay_size', type=int, default=1000000)
+ 	parser.add_argument('--replay_size', type=int, default=200000)
  	parser.add_argument('--batch_size', type=int, default=32)
  	parser.add_argument('--num_actions', type=int, default=None)
  	parser.add_argument('--initial_eps', type=float, default=1.0)
