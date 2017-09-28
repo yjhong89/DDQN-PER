@@ -203,10 +203,11 @@ class Atari:
 			self.cur_state_proc = np.copy(self.state_proc)
 			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
 			# Preprocess
-			self.state_resized = cv2.resize(self.state, (84,110))
-			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
+			#self.state_resized = cv2.resize(self.state, (84,110))
+			self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
+			self.state_resized = self.state_gray[34:34+160,:]
 			# Next state
-			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
+			self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
 			
 			# Get one sample in minibatch, make batch index
 			new_sample_s = np.expand_dims(self.cur_state_proc, axis=0)
@@ -274,9 +275,10 @@ class Atari:
 			self.state_gray_old = np.copy(self.state_gray)
 			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
 			# Preprocess
-			self.state_resized = cv2.resize(self.state, (84,110))
-			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
-			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
+			#self.state_resized = cv2.resize(self.state, (84,110))
+			self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
+			self.state_resized = self.state_gray[34:34+160, :]
+			self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
 
 
 	def copy_network(self):
@@ -312,14 +314,14 @@ class Atari:
   		self.state = self.engine.new_game()
   		# Preprocess by first converting RGB representation to gray-scale and down-sampling it to 110*84
   		# cv2.resize(image, (width, height) => 110 * 84 * 3
-  		self.state_resized = cv2.resize(self.state, (84,110))
   		# To gray-scale
-  		self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
-		print(self.state_gray.shape)
+  		self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
+		self.state_resized = self.state_gray[34:34+160,:]
+		#print(self.state_resized.shape)
   		# Reset, no previous state
   		self.state_gray_old = None
   		# state_proc[:,:,:3] will remain as zero
-  		self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
+  		self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
 
 	
 	def select_action(self, state):
