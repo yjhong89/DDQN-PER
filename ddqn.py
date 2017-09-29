@@ -154,7 +154,7 @@ class Atari:
 					loss_, q_targets_, q_pred_, _ = self.sess.run([self.q_net.loss, self.q_net.q_target, self.q_net.q_pred, self.q_net.train_op], feed_dict = feed)	
 					q_values_ = self.sess.run(self.q_net.q_value, feed_dict=feed)
 					# Update clipped prioriy
-					td_error = abs(td_error_) / max(1, abs(td_error_))
+					td_error = abs(td_error_ / max(1, abs(td_error_)))
 					print('Loss : %3.4f, Q target : %s, Q_values : %s, Q pred : %s, td_error : %3.4f, is : %3.4f' % (loss_, q_targets_, q_values_, q_pred_, td_error, sample_is_weight))
 					print('%s, %s, %s' %(sample_act, sample_rwd, sample_ter))
 					if td_error < self.args.epsilon:
@@ -203,11 +203,10 @@ class Atari:
 			self.cur_state_proc = np.copy(self.state_proc)
 			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
 			# Preprocess
-			#self.state_resized = cv2.resize(self.state, (84,110))
-			self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
-			self.state_resized = self.state_gray[34:34+160,:]
+			self.state_resized = cv2.resize(self.state, (84,110))
+			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
 			# Next state
-			self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
+			self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
 			
 			# Get one sample in minibatch, make batch index
 			new_sample_s = np.expand_dims(self.cur_state_proc, axis=0)
@@ -275,10 +274,9 @@ class Atari:
 			self.state_gray_old = np.copy(self.state_gray)
 			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
 			# Preprocess
-			#self.state_resized = cv2.resize(self.state, (84,110))
-			self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
-			self.state_resized = self.state_gray[34:34+160, :]
-			self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
+			self.state_resized = cv2.resize(self.state, (84,110))
+			self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
+			self.state_proc[:,:,3] = self.state_gray[26:110, :]/self.args.img_scale
 
 
 	def copy_network(self):
@@ -315,13 +313,12 @@ class Atari:
   		# Preprocess by first converting RGB representation to gray-scale and down-sampling it to 110*84
   		# cv2.resize(image, (width, height) => 110 * 84 * 3
   		# To gray-scale
-  		self.state_gray = cv2.cvtColor(self.state, cv2.COLOR_BGR2GRAY)
-		self.state_resized = self.state_gray[34:34+160,:]
-		#print(self.state_resized.shape)
+		self.state_resized = cv2.resize(self.state, (84,110))
+  		self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
   		# Reset, no previous state
   		self.state_gray_old = None
   		# state_proc[:,:,:3] will remain as zero
-  		self.state_proc[:,:,3] = cv2.resize(self.state_resized, (84,84))/self.args.img_scale
+  		self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
 
 	
 	def select_action(self, state):
