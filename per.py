@@ -40,7 +40,7 @@ class PER:
 		# To sample mini batch of size k, the range[0, sum] is divided eequally into k ranges
 		for i in xrange(self.args.batch_size):
 			random_number = (i * divide_index) + (np.random.random(1) * divide_index)
-			print('%d-th random number %3.3f between %3.3f : %3.3f' %(i+1, random_number, divide_index*i, divide_index*(i+1)))
+			#print('%d-th random number %3.3f between %3.3f : %3.3f' %(i+1, random_number, divide_index*i, divide_index*(i+1)))
 			# 'transition' will be list of experience
 			transition, priority = self.bt.retrieve(random_number)			
 			# Store each batch track path to update transition priority

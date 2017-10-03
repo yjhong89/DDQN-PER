@@ -42,7 +42,7 @@ class Q_network():
 			# If terminal state, next state q : 0
 			self.q_target = self.rewards + tf.multiply(1-self.terminals, tf.multiply(self.args.discount_factor,self.q_max))
 			# Only get q value for corresponding action
-			self.q_pred = tf.reduce_sum(self.q_value*self.actions, reduction_indices=1)
+			self.q_pred = tf.reduce_sum(tf.multiply(self.q_value, self.actions), reduction_indices=1)
 			self.td_error = self.q_target - self.q_pred
 
 			self.tr_vrbs = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
@@ -54,12 +54,12 @@ class Q_network():
 			self.is_weight = tf.placeholder(tf.float32, [None], name='IS_Weight')
 			# w*(td_error)^2
 			self.loss = tf.reduce_sum(0.5 * self.is_weight * tf.pow(self.td_error, 2))
-			self.optimizer = tf.train.RMSPropOptimizer(self.args.learning_rate, 0.99, 0, 1e-6)
 			self.global_step = tf.Variable(0, name='global_step', trainable=False)
+			self.train_op = tf.train.RMSPropOptimizer(self.args.learning_rate, 0.99, 0, 1e-6).minimize(self.loss, global_step=self.global_step)
 			# Get gradient of each trainable variables as g/v list
-			grads, vrbs = zip(*self.optimizer.compute_gradients(self.loss))
+			#grads, vrbs = zip(*self.optimizer.compute_gradients(self.loss))
 			# Convert gradient to tf.Variables to accumulate
 			#self.accum_vars = [tf.Variable(tf.zeros_like(v), trainable=False) for v in self.tr_vrbs]
 			#self.accum_ops = [accum_vars[i].assign_add(gv[0]) for i, gv in enumerate(self.grads)]
 			#self.train_op = self.optimizer.apply_gradients([(self.accum_vars[i], gv[1]) for i, gv in enumerate(self.grads)], global_step=self.global_step)
-			self.train_op = self.optimizer.apply_gradients(zip(grads, vrbs))
+			#self.train_op = self.optimizer.apply_gradients(zip(grads, vrbs))
