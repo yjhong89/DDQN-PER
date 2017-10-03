@@ -332,7 +332,7 @@ class Atari:
 			max_action_indices = np.argwhere(q_prediction == np.max(q_prediction))
 			# If max_action_indices has more than 1 element, Choose 1 of them
 			if len(max_action_indices) > 1:
-				action_idx = max_action_indices[np.random.randint(0, len(max_action_indexs))][0]
+				action_idx = max_action_indices[np.random.randint(0, len(max_action_indices))][0]
 				return action_idx, self.engine.legal_actions[action_idx], np.max(q_prediction)
 			else:
 				action_idx = max_action_indices[0][0]
