@@ -91,7 +91,7 @@ class BinaryTree():
 			binary_path.append(0)
 		# 0 : Left, 1: Right
 		binary_path.reverse()
-		print(binary_path)
+		#print(binary_path)
 		def search(node=None):
 			#print('Searching leaf from root')
 			if node is None:
@@ -119,7 +119,7 @@ class BinaryTree():
 	def update_transition(self, updated_priority, track_path):
 		node = self.root
 		self.update_flag = True
-		print(track_path)
+		#print(track_path)
 		for _, track in enumerate(track_path):
 			if track:
 				#print('Going right\n')

@@ -129,13 +129,13 @@ class Atari:
 					online_q_values = self.sess.run(self.q_net.q_value, feed_dict = feed)
 					# Get action index(argmax) which maximum q value, [1,]
 					online_q_argmax = np.argmax(online_q_values, axis =1)
-					print('Online q values %s and max argument %d' % (online_q_values, online_q_argmax)) 
+					#print('Online q values %s and max argument %d' % (online_q_values, online_q_argmax)) 
 					# [1, num actions]
 					target_value = self.sess.run(self.target_net.q_value, feed_dict = {self.target_net.states : sample_next_s})
 					# Q_target(next_state, argmax(Q_online(next_state))), Getting max value by argmax index
 					# Make it [1,]
 					target_max_value = target_value[0][online_q_argmax]
-					print('Target q values %s and max value %s' %(target_value, target_max_value))		
+					#print('Target q values %s and max value %s' %(target_value, target_max_value))		
 					feed = {self.q_net.states : sample_s, self.q_net.actions : sample_act, self.q_net.rewards : sample_rwd, self.q_net.terminals : sample_ter, self.q_net.q_max : target_max_value}
 					# Get TD Error, as a type of list
 					td_error_ = self.sess.run(self.q_net.td_error, feed_dict=feed)
@@ -155,12 +155,12 @@ class Atari:
 					q_values_ = self.sess.run(self.q_net.q_value, feed_dict=feed)
 					# Update clipped prioriy
 					td_error = abs(td_error_ / max(1, abs(td_error_)))
-					print('Loss : %3.4f, Q target : %s, Q_values : %s, Q pred : %s, td_error : %3.4f, is : %3.4f' % (loss_, q_targets_, q_values_, q_pred_, td_error, sample_is_weight))
-					print('%s, %s, %s' %(sample_act, sample_rwd, sample_ter))
+					#print('Loss : %3.4f, Q target : %s, Q_values : %s, Q pred : %s, td_error : %3.4f, is : %3.4f' % (loss_, q_targets_, q_values_, q_pred_, td_error, sample_is_weight))
+					#print('%s, %s, %s' %(sample_act, sample_rwd, sample_ter))
 					if td_error < self.args.epsilon:
 						td_error += self.args.epsilon
 					self.per.bt.update_transition(td_error, sample_track[i])	
-					print('%d/%d\n' % (i+1, self.args.batch_size))
+					#print('%d/%d\n' % (i+1, self.args.batch_size))
 
 				# Copy network
 				if np.mod(self.step, self.args.copy_interval) == 0:
@@ -189,6 +189,7 @@ class Atari:
 			self.action_index, self.action, self.maxQ = self.select_action(self.state_proc)
 			# Get reward and next state from environment
 			self.state, self.reward, self.terminal = self.engine.next(self.action)
+			self.episode_step += 1
 			# Scale rewards, all positive rewards to be 1, all negative rewards to be -1
 			self.reward_scaled = self.reward // max(1,abs(self.reward))
 			self.epi_reward += self.reward_scaled
@@ -196,9 +197,8 @@ class Atari:
 
 			# Change to next 4 consecutive images
 			'''
-			Using np.copy not to change 'self.state_gray_old'
+			Using np.copy not to change old one
 			'''
-			self.state_gray_old = np.copy(self.state_gray)
 			# Save current state for feeding batch
 			self.cur_state_proc = np.copy(self.state_proc)
 			self.state_proc[:,:,0:3] = self.state_proc[:,:,1:4]
@@ -234,7 +234,7 @@ class Atari:
 			if self.priority < self.args.epsilon:
 				self.priority += self.args.epsilon
 
-			if self.state_gray_old is not None:
+			if self.episode_step > 2:
 				self.per.insert(self.cur_state_proc, self.action_index, self.reward_scaled, self.terminal, self.state_proc, self.priority) 		
 
 							
@@ -302,23 +302,23 @@ class Atari:
 
  	
 	def reset_game(self):
-  		print('Reset game at : %s ' % str(self.step))
+		self.episode_step = 0
 		# Initialize all thing to zero
-  		self.state_proc = np.zeros([84,84,4])
-  		self.action = -1
-  		self.reward = 0
-  		self.terminal = False
-  		# [screen_height, screen_width, 3]
-  		self.state = self.engine.new_game()
-  		# Preprocess by first converting RGB representation to gray-scale and down-sampling it to 110*84
-  		# cv2.resize(image, (width, height) => 110 * 84 * 3
-  		# To gray-scale
+		self.state_proc = np.zeros([84,84,4])
+		self.action = -1
+		self.reward = 0
+		self.terminal = False
+		# [screen_height, screen_width, 3]
+		self.state = self.engine.new_game()
+		# Preprocess by first converting RGB representation to gray-scale and down-sampling it to 110*84
+		# cv2.resize(image, (width, height) => 110 * 84 * 3
+		# To gray-scale
 		self.state_resized = cv2.resize(self.state, (84,110))
-  		self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
-  		# Reset, no previous state
-  		self.state_gray_old = None
-  		# state_proc[:,:,:3] will remain as zero
-  		self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
+		self.state_gray = cv2.cvtColor(self.state_resized, cv2.COLOR_BGR2GRAY)
+		# Reset, no previous state
+		self.state_gray_old = None
+		# state_proc[:,:,:3] will remain as zero
+		self.state_proc[:,:,3] = self.state_gray[26:110,:]/self.args.img_scale
 
 	
 	def select_action(self, state):
